@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <style>
+        :root {
+            --colorRed: #FF5353;
+            --colorRedLight: #FF535388;
+            --colorYellow: #FFC429;
+            --colorYellowLight: #FFC42988;
+            --colorBlue: #5980C1;
+            --colorBlueLight: #5980C188;
+            --colorWhite: #FBE9B7;
+            --colorWhiteLight: #FBE9B788;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            background-color: #222;
+            margin: 0;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .row {
+            display: flex;
+        }
+
+        .block {
+            width: 200px;
+            height: 200px;
+            margin: 12px;
+            cursor: pointer;
+        }
+
+        .block.red {
+            border: 3px solid var(--colorRedLight);
+            box-shadow: 0 0 50px var(--colorRedLight);
+            transition: .5s;
+        }
+
+        .block.red:hover {
+            background-color: var(--colorRedLight);
+        }
+
+        .block.red:active,
+        .block.red.active {
+            transition: 0s;
+            background-color: var(--colorRed);
+        }
+
+        .block.yellow {
+            border: 3px solid var(--colorYellowLight);
+            box-shadow: 0 0 50px var(--colorYellowLight);
+            transition: .5s;
+        }
+
+        .block.yellow:hover {
+            background-color: var(--colorYellowLight);
+        }
+
+        .block.yellow:active,
+        .block.yellow.active {
+            transition: 0s;
+            background-color: var(--colorYellow);
+        }
+
+        .block.blue {
+            border: 3px solid var(--colorBlueLight);
+            box-shadow: 0 0 50px var(--colorBlueLight);
+            transition: .5s;
+        }
+
+        .block.blue:hover {
+            background-color: var(--colorBlueLight);
+        }
+
+        .block.blue:active,
+        .block.blue.active {
+            transition: 0s;
+            background-color: var(--colorBlue);
+        }
+
+        .block.white {
+            border: 3px solid var(--colorWhiteLight);
+            box-shadow: 0 0 50px var(--colorWhiteLight);
+            transition: .5s;
+        }
+
+        .block.white:hover {
+            background-color: var(--colorWhiteLight);
+        }
+
+        .block.white:active,
+        .block.white.active {
+            transition: 0s;
+            background-color: var(--colorWhite);
+        }
+
+        .start-button {
+            font-size: 100px;
+            padding: 200px 100px;
+            border: 1px solid #ddd;
+            background-color: transparent;
+            color: #ddd;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+
+            transition: .5s;
+            cursor: pointer;
+        }
+
+        .start-button:hover {
+            background-color: #eee4;
+            color: #333;
+        }
+
+        .circles {
+            display: flex;
+        }
+
+        .circle {
+            width: 10px;
+            height: 10px;
+            opacity: 0.3;
+            border-radius: 100%;
+            margin: 5px;
+            background: white;
+        }
+
+        .circle.active {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <script>
+        class Audioable {
+            initializeAudio(ids) {
+                return this.getAudios(ids).then(audios => {
+                    this.audios = audios;
+                });
+            }
+
+            getAudio(id) {
+                return new Promise(resolve => {
+                    let audio = document.createElement('audio');
+                    audio.src = `https://awiclass.monoame.com/pianosound/set/${id}.wav`;
+                    audio.addEventListener('canplaythrough', function () {
+                        resolve(audio);
+                    });
+                });
+            }
+
+            getAudios(ids) {
+                return Promise.all(ids.map(id => this.getAudio(id)));
+            }
+
+            playSound() {
+                this.audios.forEach(audio => {
+                    audio.currentTime = 0;
+                    audio.play();
+                })
+            }
+        }
+        class Sound extends Audioable {
+            constructor(ids) {
+                super();
+                this.initializeAudio(ids);
+            }
+        }
+
+        class StartButton {
+            constructor(clickHandle) {
+                this.el = document.createElement('button');
+                this.el.innerText = 'START';
+                this.el.className = 'start-button';
+
+                this.el.addEventListener('mousedown', () => {
+                    this.el.remove();
+                    clickHandle();
+                });
+            }
+        }
+
+        class Game {
+            constructor(selector) {
+                this.el = document.createElement('div');
+                this.startButton = new StartButton(() => this.start());
+                this.circles = document.createElement('div');
+                this.circles.className = 'circles';
+                this.el.appendChild(this.startButton.el);
+                this.el.appendChild(this.circles);
+                this.blocks = [];
+                this.level = 1;
+                this.answer = this.getAnswer();
+                this.userInput = '';
+                this.status = 'waiting';
+                this.initialized = false;
+
+                this.sounds = {
+                    correct: new Sound([1, 3, 5, 8]),
+                    wrong: new Sound([2, 4, 5.5, 7])
+                };
+
+                document.querySelector(selector).appendChild(this.el);
+            }
+
+            initialize() {
+                return this.renderBlocks().then(() => this.initialized = true);
+            }
+
+            getAnswer() {
+                let answer = '';
+                for (let i = 1; i <= this.level + 3; i++) {
+                    let char = Math.floor(Math.random() * 4) + 1;
+                    answer += char;
+                }
+                return answer;
+            }
+
+            renderBlocks() {
+                let colors = ['red', 'yellow', 'blue', 'white'];
+                let promises = [];
+                for (let i = 1; i <= 2; i++) {
+                    let row = document.createElement('div');
+                    row.className = 'row';
+                    for (let j = 1; j <= 2; j++) {
+                        let id = (i - 1) * 2 + j;
+                        let block = new Block(id, colors[id - 1], this.clickHandle.bind(this));
+                        row.appendChild(block.el);
+                        this.blocks.push(block);
+                        promises.push(block.initialize());
+                    }
+                    this.el.appendChild(row);
+                }
+
+                return Promise.all(promises);
+            }
+
+            renderCircles() {
+                this.circles.innerHTML = '';
+                for (let i = 1; i <= this.answer.length; i++) {
+                    let circle = document.createElement('div');
+                    circle.className = 'circle';
+                    if (i <= this.userInput.length) {
+                        circle.classList.add('active');
+                    }
+                    this.circles.appendChild(circle);
+                }
+            }
+
+            turnAllOn() {
+                this.blocks.forEach(block => {
+                    block.el.classList.add('active');
+                });
+            }
+
+            turnAllOff() {
+                this.blocks.forEach(block => {
+                    block.el.classList.remove('active');
+                });
+            }
+
+            clickHandle(block) {
+                if (this.status !== 'waiting') {
+                    this.status = 'waiting';
+                    this.userInput += block.id;
+                    block.flash();
+                    let currentAnswer = this.answer.substr(0, this.userInput.length);
+                    if (currentAnswer === this.userInput) {
+                        if (this.answer === this.userInput) {
+                            console.log('correct');
+                            this.turnAllOn();
+                            this.sounds.correct.playSound();
+                            setTimeout(() => {
+                                this.turnAllOff();
+                                this.levelUp();
+                                setTimeout(() => {
+                                    this.start();
+                                }, 500);
+                            }, 100);
+                        } else {
+                            this.status = 'playing';
+                        }
+                    } else if (currentAnswer !== this.userInput) {
+                        console.log('wrong');
+                        this.turnAllOn();
+                        this.sounds.wrong.playSound();
+                        setTimeout(() => {
+                            this.turnAllOff();
+                            setTimeout(() => {
+                                this.start();
+                            }, 500);
+                        }, 100);
+                    }
+                }
+                this.renderCircles();
+            }
+
+            levelUp() {
+                this.level++;
+                this.answer = this.getAnswer();
+            }
+
+            async start() {
+                if (!this.initialized) {
+                    await this.initialize()
+                }
+
+                this.status = 'waiting';
+                this.userInput = '';
+                this.renderCircles();
+                let answer = this.answer.split('');
+                let interval = setInterval(() => {
+                    let char = answer.shift();
+                    let block = this.blocks.find(b => b.id == char);
+                    block.flash();
+                    if (answer.length === 0) {
+                        clearInterval(interval);
+                        this.status = 'playing';
+                    }
+                }, 400);
+            }
+        }
+
+        class Block extends Audioable {
+            constructor(id, color, clickHandle) {
+                super();
+                this.id = id;
+                this.el = document.createElement('div');
+                this.el.className = `block ${color}`;
+                this.el.addEventListener('mousedown', () => clickHandle(this));
+            }
+
+            flash() {
+                this.el.classList.add('active');
+                this.playSound();
+                setTimeout(() => {
+                    this.el.classList.remove('active');
+                }, 100);
+            }
+
+            initialize() {
+                this.initializeAudio([this.id]);
+            }
+        }
+
+        let game = new Game('body');
+        game.initialize();
+    </script>
+</body>
+
+</html>
